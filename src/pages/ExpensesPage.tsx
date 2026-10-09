@@ -1,5 +1,7 @@
-import { useState } from "react";
+
+import { Fragment, useState } from "react";
 import { useLocation } from "react-router-dom";
+
 import { useAppSelector, useAppDispatch } from "../app/hooks";
 import { deleteExpense } from "../app/features/expenses/expensesSlice";
 import { calculateBalances } from "../utils/calculateBalances";
@@ -16,8 +18,9 @@ export default function ExpensesPage() {
   const [deleteMessage, setDeleteMessage] = useState("");
   const [expandedExpenses, setExpandedExpenses] = useState<string[]>([]);
 
-  const successMessage =
-    (location.state as { successMessage?: string } | null)?.successMessage;
+  const successMessage = (
+    location.state as { successMessage?: string } | null
+  )?.successMessage;
 
   const filteredExpenses =
     selectedCategory === "All"
@@ -42,11 +45,17 @@ export default function ExpensesPage() {
   }
 
   function handleDelete(expenseId: string, description: string) {
-    if (window.confirm(`Are you sure you want to delete "${description}"?`)) {
+    if (
+      window.confirm(
+        `Are you sure you want to delete "${description}"?`,
+      )
+    ) {
       dispatch(deleteExpense(expenseId));
+
       setExpandedExpenses((current) =>
         current.filter((id) => id !== expenseId),
       );
+
       setDeleteMessage(`"${description}" was deleted successfully.`);
     }
   }
@@ -67,7 +76,10 @@ export default function ExpensesPage() {
     let assignedPaise = 0;
 
     entries.forEach(([memberId, percentage], index) => {
-      const share = Math.floor((expense.amount * percentage) / 100);
+      const share = Math.floor(
+        (expense.amount * percentage) / 100,
+      );
+
       shares[memberId] = share;
       assignedPaise += share;
 
@@ -95,7 +107,9 @@ export default function ExpensesPage() {
 
           return (
             <p key={member.id}>
-              <strong>{member.name}:</strong>{" "}
+              <strong>
+                {member.id} — {member.name}:
+              </strong>{" "}
               {balance > 0
                 ? `Gets back ${formatRupees(balance)}`
                 : balance < 0
@@ -109,11 +123,16 @@ export default function ExpensesPage() {
       <section>
         <h2>All Expenses</h2>
 
-        <label htmlFor="category-filter">Filter by category: </label>
+        <label htmlFor="category-filter">
+          Filter by category:{" "}
+        </label>
+
         <select
           id="category-filter"
           value={selectedCategory}
-          onChange={(event) => setSelectedCategory(event.target.value)}
+          onChange={(event) =>
+            setSelectedCategory(event.target.value)
+          }
         >
           <option value="All">All categories</option>
           <option value="Food">Food</option>
@@ -131,6 +150,7 @@ export default function ExpensesPage() {
           <table>
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Date</th>
                 <th>Description</th>
                 <th>Category</th>
@@ -145,19 +165,28 @@ export default function ExpensesPage() {
               {[...filteredExpenses]
                 .sort((a, b) => b.date.localeCompare(a.date))
                 .map((expense) => {
-                  const isExpanded = expandedExpenses.includes(expense.id);
-                  const shares = isExpanded ? getSplitShares(expense) : {};
+                  const isExpanded = expandedExpenses.includes(
+                    expense.id,
+                  );
+                  const shares = isExpanded
+                    ? getSplitShares(expense)
+                    : {};
+
+                  const payer = members.find(
+                    (member) => member.id === expense.paidBy,
+                  );
 
                   return (
-                    <>
-                      <tr key={expense.id}>
+                    <Fragment key={expense.id}>
+                      <tr>
+                        <td>{expense.id}</td>
                         <td>{expense.date}</td>
                         <td>{expense.description}</td>
                         <td>{expense.category}</td>
                         <td>
-                          {members.find(
-                            (member) => member.id === expense.paidBy,
-                          )?.name ?? "Unknown"}
+                          {payer
+                            ? `${payer.id} — ${payer.name}`
+                            : expense.paidBy}
                         </td>
                         <td>{formatRupees(expense.amount)}</td>
                         <td>
@@ -172,16 +201,23 @@ export default function ExpensesPage() {
                           <button
                             type="button"
                             aria-expanded={isExpanded}
-                            onClick={() => toggleSplit(expense.id)}
+                            onClick={() =>
+                              toggleSplit(expense.id)
+                            }
                           >
-                            {isExpanded ? "Hide split" : "View split"}
+                            {isExpanded
+                              ? "Hide split"
+                              : "View split"}
                           </button>
                         </td>
                         <td>
                           <button
                             type="button"
                             onClick={() =>
-                              handleDelete(expense.id, expense.description)
+                              handleDelete(
+                                expense.id,
+                                expense.description,
+                              )
                             }
                           >
                             Delete
@@ -190,10 +226,19 @@ export default function ExpensesPage() {
                       </tr>
 
                       {isExpanded && (
-                        <tr key={`${expense.id}-split`}>
-                          <td colSpan={7}>
-                            <section aria-label={`Split details for ${expense.description}`}>
-                              <h3>{expense.description} — Split breakdown</h3>
+                        <tr>
+                          <td colSpan={8}>
+                            <section
+                              aria-label={`Split details for ${expense.description}`}
+                            >
+                              <h3>
+                                {expense.id} — {expense.description}:
+                                Split breakdown
+                              </h3>
+
+                              <p>
+                                Expense ID: <strong>{expense.id}</strong>
+                              </p>
 
                               <p>
                                 Split mode:{" "}
@@ -207,43 +252,70 @@ export default function ExpensesPage() {
                               <table>
                                 <thead>
                                   <tr>
+                                    <th>Member ID</th>
                                     <th>Member</th>
-                                    {expense.split.type === "percent" && (
+                                    {expense.split.type ===
+                                      "percent" && (
                                       <th>Percentage</th>
                                     )}
                                     <th>Share amount</th>
                                   </tr>
                                 </thead>
+
                                 <tbody>
                                   {Object.entries(shares).map(
                                     ([memberId, sharePaise]) => {
                                       const member = members.find(
-                                        (item) => item.id === memberId,
+                                        (item) =>
+                                          item.id === memberId,
                                       );
 
                                       return (
                                         <tr key={memberId}>
-                                          <td>{member?.name ?? "Unknown member"}</td>
-                                          {expense.split.type === "percent" && (
+                                          <td>{memberId}</td>
+                                          <td>
+                                            {member?.name ??
+                                              "Unknown member"}
+                                          </td>
+                                          {expense.split.type ===
+                                            "percent" && (
                                             <td>
-                                              {expense.split.shares[memberId]}%
+                                              {
+                                                expense.split.shares[
+                                                  memberId
+                                                ]
+                                              }
+                                              %
                                             </td>
                                           )}
-                                          <td>{formatRupees(sharePaise)}</td>
+                                          <td>
+                                            {formatRupees(
+                                              sharePaise,
+                                            )}
+                                          </td>
                                         </tr>
                                       );
                                     },
                                   )}
                                 </tbody>
+
                                 <tfoot>
                                   <tr>
-                                    <th colSpan={expense.split.type === "percent" ? 2 : 1}>
+                                    <th
+                                      colSpan={
+                                        expense.split.type ===
+                                        "percent"
+                                          ? 3
+                                          : 2
+                                      }
+                                    >
                                       Total split
                                     </th>
                                     <th>
                                       {formatRupees(
                                         Object.values(shares).reduce(
-                                          (sum, amount) => sum + amount,
+                                          (sum, amount) =>
+                                            sum + amount,
                                           0,
                                         ),
                                       )}
@@ -255,7 +327,7 @@ export default function ExpensesPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
             </tbody>
